@@ -1,0 +1,22 @@
+{
+  "name": "shelf-items",
+  "version": "1.0.0",
+  "description": "Package for handling your items inside the shelf",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "typescript"
+  ],
+  "author": "Mario <ardamomo3@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/ryomario/shelf-items.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ryomario/shelf-items/issues"
+  },
+  "homepage": "https://github.com/ryomario/shelf-items#readme"
+}
