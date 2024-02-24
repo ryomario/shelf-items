@@ -9,6 +9,11 @@ export default class Item {
      */
     constructor(tag: String) {
         this.tag = tag;
+        this.position = {
+            row: 0,
+            column: 0,
+            order: 0
+        }
     }
 
     /**

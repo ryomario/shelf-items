@@ -85,8 +85,44 @@ export default class Shelf {
         }
         return undefined;
     }
+
+    private _getNextPosition(position: ItemPosition, iterationCount: number = 0): ItemPosition|undefined {
+        if (iterationCount >= (this.maxItemPosition.column * this.maxItemPosition.row * this.maxItemPosition.order)) return undefined;
+        const nextOrder = position.order + 1;
+        if (nextOrder <= this.maxItemPosition.order) return {
+            ...position,
+            order: nextOrder
+        };
+        const nextCol = position.column + 1;
+        if (nextCol <= this.maxItemPosition.column) {
+            return this._getNextPosition({
+                ...position,
+                column: nextCol,
+                order: 0
+            },iterationCount + 1);
+        }
+        const nextRow = position.row + 1;
+        if (nextRow <= this.maxItemPosition.row) {
+            return this._getNextPosition({
+                row: nextRow,
+                column: 1,
+                order: 0
+            },iterationCount + 1);
+        }
+
+        return this._getNextPosition({
+            row: 1,
+            column: 1,
+            order: 0
+        },iterationCount + 1);
+    }
     
     private _mappingItem(item: Item, position?: ItemPosition, isPush: boolean = false): boolean {
+        const pos = this._findPosition(item);
+        if (pos !== undefined) {
+            this.listeners.forEach(listener => listener.OnFailedMappingItem(item,this,'Item already in shelf!'));
+            return false;
+        }
         if (position === undefined) position = this._getAvailablePosition();
         if (position === undefined) {
             this.listeners.forEach(listener => listener.OnFailedMappingItem(item,this,'The shelf is already full!'));
@@ -122,27 +158,33 @@ export default class Shelf {
             if (orderMap !== undefined){
                 // check is order map set?
                 const order = item.getPosition().order;
-                if (!orderMap.get(order)){ // not yet set order map
-                    if (order > this.maxItemPosition.order){ // over max value
-                        this.listeners.forEach(listener => listener.OnFailedMappingItem(item,this,'Over size order position'));
-                        return false;
-                    } else {
-                        const itemIn = orderMap.get(order);
-                        /**
-                         * SET ITEM TO MAP
-                         */
-                        orderMap.set(order, item); // set item to the map 
-                        if (itemIn && isPush){
-                            const mapped = this._mappingItem(itemIn);
-                            if (mapped) {
-                                this.listeners.forEach(listener => listener.OnMovedItem(itemIn,this));
-                            } else {
-                                this.listeners.forEach(listener => listener.OnDeletedItem(itemIn,this));
-                            }
+                if (order > this.maxItemPosition.order){ // over max value
+                    this.listeners.forEach(listener => listener.OnFailedMappingItem(item,this,'Over size order position'));
+                    return false;
+                } else {
+                    const itemIn = orderMap.get(order);
+                    /**
+                     * SET ITEM TO MAP
+                     */
+                    orderMap.set(order, item); // set item to the map 
+                    if (itemIn && isPush){
+                        const availablePos = this._getAvailablePosition();
+                        const newPosition = this._getNextPosition({...itemIn.getPosition()}); // will generate next position
+                        let mapped = false;
+                        if (availablePos) {
+                            mapped = this._mappingItem(itemIn,newPosition,true);
                         }
-                        this.listeners.forEach(listener => listener.OnMappedItem(item,this));
-                        return true;
+                        if (mapped) {
+                            this.listeners.forEach(listener => listener.OnMovedItem(itemIn,this));
+                        } else {
+                            this.listeners.forEach(listener => {
+                                listener.OnFailedMappingItem(itemIn,this,'The shelf already full!');
+                                listener.OnDeletedItem(itemIn,this);
+                            });
+                        }
                     }
+                    this.listeners.forEach(listener => listener.OnMappedItem(item,this));
+                    return true;
                 }
             }
         }
@@ -173,6 +215,15 @@ export default class Shelf {
     
         if (this._removeItemMap(pos)) return true;
         return false;
+    }
+
+    private _moveItem(item: Item, toPosition: ItemPosition, isPush: boolean = false): boolean {
+        const isRemoved = this._removeItem(item);
+        const isMapped = this._mappingItem(item, toPosition, isPush);
+        if (isRemoved && isMapped) {
+            this.listeners.forEach(listener => listener.OnMovedItem(item,this));
+        }
+        return isMapped;
     }
 
     private _findItemByPos(position: ItemPosition): Item|undefined {
@@ -320,14 +371,15 @@ export default class Shelf {
     }
 
     /**
-     * set an Item on spesific position
+     * add or move an Item on spesific position
      */
     public async setItem(item: Item, position?: ItemPosition): Promise<void> {
-        const res = this._removeItem(item);
-        if (res) {
-            this.listeners.forEach(listener => listener.OnDeletedItem(item, this));
+        if (position === undefined) position = item.getPosition();
+        if (this._moveItem(item, position, true)){
+            // this.items.push(item);
+            this.listeners.forEach(listener => listener.OnAddedItem(item, this));
         } else {
-            this.listeners.forEach(listener => listener.OnFailedDeletingItem(item, this, 'Item not found'));
+            this.listeners.forEach(listener => listener.OnFailedAddingItem(item,this,'Mapping failed'));
         }
     }
 
