@@ -2,8 +2,14 @@
   "name": "shelf-items",
   "version": "1.0.0",
   "description": "Package for handling your items inside the shelf",
-  "main": "index.js",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
   "scripts": {
+    "build": "tsup",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
@@ -18,5 +24,11 @@
   "bugs": {
     "url": "https://github.com/ryomario/shelf-items/issues"
   },
-  "homepage": "https://github.com/ryomario/shelf-items#readme"
+  "homepage": "https://github.com/ryomario/shelf-items#readme",
+  "devDependencies": {
+    "@types/node": "^20.11.19",
+    "ts-node": "^10.9.2",
+    "tsup": "^8.0.2",
+    "typescript": "^5.3.3"
+  }
 }
